@@ -3,6 +3,7 @@ const fs = require('fs');
 const util = require('util');
 const path = require('path');
 const cheerio = require('cheerio');
+const asyncWriteFile = util.promisify(fs.writeFile);
 
 const fetchHtml = async (url) => {
   try {
@@ -12,19 +13,20 @@ const fetchHtml = async (url) => {
     console.error(
       `ERROR: An error occurred while trying to fetch the URL: ${url}`
     );
+    process.exit(1);
   }
 };
 
 const scrapSteam = async (url) => {
+  const html = await fetchHtml(url);
+
   try {
-    const html = await fetchHtml(url);
     const selector = cheerio.load(html);
     const searchResults = selector('body').find('script#__NEXT_DATA__').html();
     const data = JSON.parse(searchResults).props.initialState.tv.tvSchedule
       .list;
 
-    const writeFilePromisified = util.promisify(fs.writeFile);
-    await writeFilePromisified(
+    await asyncWriteFile(
       path.join(__dirname, 'data.json'),
       JSON.stringify(data, null, 2)
     );
